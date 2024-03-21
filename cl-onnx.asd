@@ -4,7 +4,7 @@
   :licence "MIT"
   :description "A Tiny ONNX Graph Manipulator for Common Lisp"
   :serial t
-  :depends-on (:protobuf)
+  :depends-on (:cl-protobufs)
   :pathname "source"
   :components ((:file "package")))
 

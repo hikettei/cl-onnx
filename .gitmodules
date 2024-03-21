@@ -1,0 +1,6 @@
+[submodule "onnx"]
+	path = onnx
+	url = git@github.com:onnx/onnx.git
+[submodule "cl-protobufs"]
+	path = cl-protobufs
+	url = git@github.com:qitab/cl-protobufs.git
