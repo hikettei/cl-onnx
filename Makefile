@@ -28,7 +28,7 @@ install_cl_protobufs:
 
 .PHONY: build
 build: install_deps install_cl_protobufs ## Builds onnx.proto
-	$(PROTOC) --plugin=protoc-gen-cl-pb=/usr/local/bin/protoc-gen-cl-pb --proto_path=./onnx/onnx --lisp_out=./source ./onnx/onnx/onnx.proto
+	$(PROTOC) --plugin=protoc-gen-cl-pb=$(INSTALL_DIR)/protoc-gen-cl-pb --cl-pb_out=output-file=onnx.proto.lisp:./source --proto_path=./onnx/onnx/ ./onnx/onnx/onnx.proto
 
 .PHONY: test
 test: build export_dummy_graph ## Executes the test harness.
