@@ -1,8 +1,20 @@
 
 (in-package :cl-onnx)
 
-
-(defun load-onnx-model (path)
+(declaim (ftype (function ((or pathname string)) (or t Model-Proto)) load-model))
+(defun load-model (path)
+  "load-model"
+  (declare (type (or pathname string) path))
   (with-open-file (stream path :direction :input :element-type 'unsigned-byte)
-    (cl-protobufs:deserialize-from-stream 'cl-protobufs.onnx:model-proto stream)))
+    (let ((result
+	    ;(protobuf->onnx
+	     (cl-protobufs:deserialize-from-stream 'cl-protobufs.onnx:model-proto stream)));)
+      result)))
 
+(declaim (ftype (function ((or pathname string) Model-Proto) boolean) save-model))
+(defun save-model (path model-proto)
+  "save-model"
+  (declare (type (or pathname string) path)
+	   (type model-proto model-proto))
+  
+  nil)

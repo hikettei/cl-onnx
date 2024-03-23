@@ -13,9 +13,27 @@
   :licence "MIT"
   :description "A Tiny ONNX Graph Manipulator for Common Lisp"
   :serial t
-  :depends-on (:cl-protobufs :cl-onnx/proto :mgl-pax)
+  :depends-on (:cl-protobufs :cl-onnx/proto :mgl-pax :cl-annot-revisit)
   :pathname "source"
-  :components ((:file "package")))
+  :components ((:file "package")
+	       (:file "utils")
+	       (:file "facet")
+	       (:file "model-proto")
+	       (:file "attribute-proto")
+	       (:file "value-info-proto")
+	       (:file "node-proto")
+	       (:file "training-info-proto")
+	       (:file "string-string-entry-proto")
+	       (:file "tensor-annotation")
+	       (:file "graph-proto")
+	       (:file "tensor-proto")
+	       (:file "sparse-tensor-proto")
+	       (:file "tensor-shape-proto")
+	       (:file "type-proto")
+	       (:file "operator-set-id-proto")
+	       (:file "function-proto")	       
+
+	       (:file "io")))
 
 (asdf:defsystem "cl-onnx/test"
   :author "hikettei"
