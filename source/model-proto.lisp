@@ -5,15 +5,9 @@
 
 (in-package :cl-onnx)
 
-
-;;
-;; CLIでNetronっぽいのが動くようにする
-;;
-
-
 ;; name type-in-llisp onnx-protobuf-p optional-p listp
 (define-proto (model-proto cl-protobufs.onnx:model-proto)
-  (ir-version fixnum nil t t nil)
+  (ir-version fixnum nil t nil)
   (opset-import operator-set-id-proto t nil t)
   (producer-name string nil t nil)
   (producer-version string nil t nil)
@@ -26,9 +20,9 @@
   (functions function-proto t t t))
 
 
-(defmethod print-object ((proto Model-Proto) stream)
-  (format stream "<Model-Proto~%ir_version=~a~a~a"
-	  (model-proto-ir-version proto)
-	  (model-proto-opset-import proto)
-	  (model-proto-producer-name proto)))
+;(defmethod print-object ((proto Model-Proto) stream)
+;  (format stream "<Model-Proto~%ir_version=~a~a~a"
+;	  (model-proto-ir-version proto)
+;	  (model-proto-opset-import proto)
+;	  (model-proto-producer-name proto)))
 

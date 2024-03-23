@@ -9,6 +9,11 @@
 
 (defmacro define-proto ((name protobuf-name) &rest attributes)
   "attributes = (name type-in-lisp onnx-protobuf-obj-p optional-p listp)"
+
+  (assert (every #'(lambda (x) (= (length x) 5)) attributes)
+	  ()
+	  "Assertion Failed with each attributes has 5 elements: ~a" attributes)
+  
   (let ((constructor (symb 'make- name))
 	(protobuf-constructor
 	  (let ((*package* (find-package :cl-protobufs.onnx)))
@@ -40,7 +45,7 @@
 		     :type
 		     ,(if optionalp
 			  `(or
-			    nil
+			    null
 			    ,(if listp 'list type))
 			  (if listp 'list type)))))
 	 
@@ -83,6 +88,9 @@
 				     `(onnx->protobuf obj)
 				     'obj))
 			    :%unset))))))))))
+
+(defmethod protobuf->onnx ((proto (eql nil)))
+  proto)
 
 ;; (mgl-pax:defsection @facets (:title "Facets"))
 

@@ -6,7 +6,7 @@
 	      (input string nil t t)
 	      (output string nil t t)
 	      (attribute string nil t t)
-	      (attribute-proto t t t)
+	      (attribute-proto attribute-proto t t t)
 	      (node node-proto t t t)
 	      (doc-string string nil t nil)
 	      (opset-import operator-set-id-proto t t t)
