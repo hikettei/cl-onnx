@@ -12,7 +12,11 @@
   (:export
    #:load-model
    #:save-model
-   ))
+    )
+
+  (:export
+    #:visualize)
+  )
 
 (cl:in-package :cl-onnx)
 

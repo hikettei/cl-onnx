@@ -150,14 +150,39 @@
 				     (reader 0))
 				   onnx-object))
 			       (format nil "~%"))))))))))))
-			  
-		    
-;; TODO: Identify is it really required or not,
-(defmethod protobuf->onnx ((proto null))
-  proto)
 
-;;todo
-;; dealing with oneof
+;; TODO: Identify is it really required or not,
+(defmethod protobuf->onnx ((proto null)) proto)
+(macrolet ((def (name)
+	     `(progn
+		(defmethod protobuf->onnx ((proto ,name)) proto)
+		(defmethod onnx->protobuf ((proto ,name)) proto))))
+  (def string)
+  (def fixnum))
+
+(cl-annot-revisit:export-structure
+  (defstruct OneOf
+    value
+    set-field))
+
+(defmethod protobuf->onnx ((proto cl-protobufs.implementation::oneof))
+  (make-oneof
+   :value
+   (protobuf->onnx
+    (cl-protobufs.implementation::oneof-value proto))
+   :set-field
+   (cl-protobufs.implementation::oneof-set-field proto)))
+
+(defmethod onnx->protobuf ((proto OneOf))
+  (cl-protobufs.implementation::make-oneof
+   :value (onnx->protobuf proto)
+   :set-field (oneof-set-field proto)))
+
+(defmethod print-object ((proto OneOf) stream)
+  (format stream "#S(OneOf[set-field=~a] ~a)" (oneof-set-field proto) (oneof-value proto)))
+
+(defmethod visualize ((proto OneOf))
+  (visualize (oneof-value proto)))
 
 ;; (mgl-pax:defsection @facets (:title "Facets"))
 

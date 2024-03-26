@@ -11,7 +11,7 @@
 
 ;; TODO: autogenerate print-object
 (defmethod visualize :around (proto)
-  (let ((visualized (call-next-method)))
+  (let ((visualized (format nil "~a" (call-next-method))))
     (with-output-to-string (out)
       (loop with
 	      indentation1 string = (apply

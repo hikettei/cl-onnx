@@ -8,3 +8,8 @@
 	      (doc-string string nil t nil)
 	      (metadata-props string-entry-entry-proto t t t))
 
+(defmethod visualize ((proto Value-Info-Proto))
+  (format nil "~a~a"
+	  (value-info-proto-name proto)
+	  (visualize (value-info-proto-type proto))))
+

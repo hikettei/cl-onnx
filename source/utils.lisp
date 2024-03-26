@@ -5,3 +5,5 @@
   (defun symb (&rest inputs)
     (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out))))))
 
+(defmacro range (from to &optional (by 1))
+  `(loop for i upfrom ,from below ,to by ,by collect i))

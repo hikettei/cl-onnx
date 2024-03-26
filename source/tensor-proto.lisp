@@ -17,4 +17,9 @@
 	      (uint64-data (unsigned-byte 64) nil t t)
 	      (metadata-props string-string-entry-proto t t t))
 
+(cl-annot-revisit:export
+  (defun int->data-type (int)
+    "Converts the given integer into the keyword representing the dtype"
+    (cl-protobufs.onnx:tensor-proto.data-type-int-to-keyword int)))
+
 ;; TODO: Implement Decoder

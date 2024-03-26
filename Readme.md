@@ -23,6 +23,10 @@ Common Lisp library for comfortably handling ONNX graphs on REPL.
 
 - confirmed working on Linux/macOS
 
+## Memo
+
+- RendererとかはProtoを読んであとはマクロで自動生成してるから，ONNX専用にする必要もない気がする
+
 ## Installing (TODO)
 
 Follow these steps:
