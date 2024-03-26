@@ -12,6 +12,4 @@
 	      (attribute attribute-proto t t t)
 	      (doc-string string nil t nil)
 	      (metadata-props string-string-entry-proto t t t))
-
-
-	      
+	   

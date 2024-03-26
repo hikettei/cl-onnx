@@ -8,4 +8,3 @@
 	      (doc-string string nil t nil)
 	      (metadata-props string-entry-entry-proto t t t))
 
-

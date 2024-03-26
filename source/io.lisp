@@ -16,5 +16,6 @@
   "save-model"
   (declare (type (or pathname string) path)
 	   (type model-proto model-proto))
-  
+  (let ((protobuf (onnx->protobuf model-proto)))
+    protobuf)
   nil)

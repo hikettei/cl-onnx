@@ -13,7 +13,7 @@
   :licence "MIT"
   :description "A Tiny ONNX Graph Manipulator for Common Lisp"
   :serial t
-  :depends-on (:cl-protobufs :cl-onnx/proto :mgl-pax :cl-annot-revisit)
+  :depends-on (:cl-protobufs :cl-onnx/proto :mgl-pax :cl-annot-revisit :cl-ppcre :alexandria)
   :pathname "source"
   :components ((:file "package")
 	       (:file "utils")
@@ -31,8 +31,8 @@
 	       (:file "tensor-shape-proto")
 	       (:file "type-proto")
 	       (:file "operator-set-id-proto")
-	       (:file "function-proto")	       
-
+	       (:file "function-proto")
+	       (:file "visualize")
 	       (:file "io")))
 
 (asdf:defsystem "cl-onnx/test"

@@ -12,4 +12,6 @@
 	      (value-info value-info-proto t t t)
 	      (quantization-annotation tensor-annotation t t t)
 	      (metadata-props string-string-entry-proto t t t))
-	    
+
+(defmethod visualize ((proto Graph-Proto))
+  (format nil "~a" proto))

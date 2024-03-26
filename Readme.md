@@ -1,11 +1,15 @@
 
 # cl-onnx
 
+Common Lisp library for comfortably handling ONNX graphs on REPL.
+
 ## Workload
 
 - [x] Protobuf <-> Common Lisp
 
 - [ ] Implement well-displayed graph (as if CLI netron!)
+
+- [ ] Find Opset Documentation on REPL
 
 - [ ] C2FFI Based Binding for ONNX
 
