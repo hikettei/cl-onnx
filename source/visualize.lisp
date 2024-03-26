@@ -45,8 +45,8 @@
 			   ""
 			   (format nil "~%")))))))
 
+;; Failed Cases
 (defmethod visualize ((proto null)) "nil")
-
 (defmethod visualize ((proto t))
   (format nil "~a" proto))
 

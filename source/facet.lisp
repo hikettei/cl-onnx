@@ -124,19 +124,30 @@
 				      collect " "))
 			       `(with-indent (,(+ indent-to 4) 0)
 				  (funcall
-				   (alexandria:compose
-				    (if ,(eql type 'string)
-					#'(lambda (x) (format nil "\"~a\"" x))
-					#'(lambda (x) x))
-				    (if ,onnx-p
-					#'visualize
-					#'(lambda (x) (format nil "~a" x)))
-				    (if ,listp
-					#'(lambda (x)
-					    (declare (type list x))
-					    (car x))
-					#'(lambda (x) x))				    
-				    #',(->accessor attr-name))
+				   (labels ((reader (n)
+					      (alexandria:compose
+					       ;; If List, subsequent elements can also be displayed? or should be omitted?
+					       (if ,listp
+						   #'(lambda (result &aux (cnt (count (format nil "~%") result)))
+						       (if (or
+							    (>= cnt 1)
+							    (null (nth (1+ n) (,(->accessor attr-name) onnx-object))))
+							   (format nil "~a ~a" result (if (= cnt 0) "" "..."))
+							   (format nil "~a ~a" result (funcall (reader (1+ n)) onnx-object))))
+						   #'(lambda (x) x))
+					       (if ,(eql type 'string)
+						   #'(lambda (x) (format nil "\"~a\"" x))
+						   #'(lambda (x) x))
+					       (if ,onnx-p
+						   #'visualize
+						   #'(lambda (x) (format nil "~a" x)))
+					       (if ,listp
+						   #'(lambda (x)
+						       (declare (type list x))
+						       (nth n x))
+						   #'(lambda (x) x))						 
+					       #',(->accessor attr-name))))
+				     (reader 0))
 				   onnx-object))
 			       (format nil "~%"))))))))))))
 			  
@@ -146,8 +157,7 @@
   proto)
 
 ;;todo
-(defmethod protobuf->onnx ((proto cl-protobufs.imeplementation::oneof))
-  )
+;; dealing with oneof
 
 ;; (mgl-pax:defsection @facets (:title "Facets"))
 
