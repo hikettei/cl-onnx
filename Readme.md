@@ -1,14 +1,27 @@
 
 # cl-onnx
 
-## Requirements
+## Workload
+
+- [x] Protobuf <-> Common Lisp
+
+- [ ] Implement well-displayed graph (as if CLI netron!)
+
+- [ ] C2FFI Based Binding for ONNX
+
+- [ ] make maintainable
+
+## Requirements (TODO)
 
 - protobuf
+
 - qlot
 
-## Installing
+- confirmed working on Linux/macOS
 
-Also you must follow:
+## Installing (TODO)
+
+Follow these steps:
 
 - install protobuf
 
