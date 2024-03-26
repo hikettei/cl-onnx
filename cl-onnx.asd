@@ -13,7 +13,15 @@
   :licence "MIT"
   :description "A Tiny ONNX Graph Manipulator for Common Lisp"
   :serial t
-  :depends-on (:cl-protobufs :cl-onnx/proto :mgl-pax :cl-annot-revisit :cl-ppcre :alexandria :cl-easel)
+  :depends-on (:cl-protobufs
+	       :cl-onnx/proto
+	       :mgl-pax
+	       :cl-annot-revisit
+	       :cl-ppcre
+	       :alexandria
+	       :cl-easel
+	       :cl-pack
+	       :cl-charm)
   :pathname "source"
   :components ((:file "package")
 	       (:file "utils")

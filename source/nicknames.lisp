@@ -10,4 +10,7 @@
   "A shortcut of Model-Proto -> Grpah"
   (model-proto-graph proto))
 
-;; (defmethod shape ((proto
+@cl-annot-revisit:export
+(defmethod shape ((proto tensor-proto))
+  (tensor-proto-dims proto))
+

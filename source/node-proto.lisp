@@ -103,18 +103,173 @@
 				      (cl-easel:carve-text canvas out count 1))))))
 	      (when (not (= 0 longest-name-constants)) write-consts)
 	      (when (not (= 0 longest-name-attrs)) write-attrs)))
-	  
 
-	  (cl-easel:carve-text canvas graph-name 1 1)
-	  
+	  (cl-easel:carve-text canvas graph-name 1 1)	  
 	  (cl-easel:realize canvas)
-	  (format stream "~%~a" canvas))))))
+	  (format stream "~a" canvas))))))
+
+(defun write-in-box (text)
+  (with-output-to-string (stream)
+    (let ((width (length text)))
+      (cl-easel:with-easel (easel (1 3 (+ 2 width)))
+	(cl-easel:draw-horizontal! easel 0 0 (+ 2 width))
+	(cl-easel:draw-horizontal! easel 2 0 (+ 2 width))
+	(cl-easel:draw-vertical! easel 0 0 3)
+	(cl-easel:draw-vertical! easel (+ 1 width) 0 3)
+	(cl-easel:carve-text easel text 1 1)
+	(cl-easel:realize easel)
+	(format stream "~a" easel)))))
+
+
+(defstruct (coordinates
+	    (:conc-name c-)
+	    (:constructor make-coordinates (x y)))
+  "
+  -------
+  |     |
+  -------
+     ^ indicates here (from where the next node should start an arrow)
+"
+  (points `(,(cons x y)) :type list))
 
 (cl-annot-revisit:export
-  (defun viewnode (graph-proto)
+  (defun viewnode (graph-proto &key (width 35))
     "Renders the computational graph"
     (declare (type Graph-Proto graph-proto))
-    (let ((*initializer-map* (make-initializer-map graph-proto)))
-      (format nil "~a" graph-proto))))
+    (with-indent (0)
+      (let* ((*initializer-map* (make-initializer-map graph-proto))
+	     (nodes  (map 'list #'visualize (graph-proto-node graph-proto)))
+	     (inputs (map 'list (alexandria:compose #'write-in-box #'value-info-proto-name) (graph-proto-input graph-proto)))
+	     (name->position (make-hash-table :test #'equal))
+	     (estimated-height
+	       (+
+		2
+		(* 3 (length nodes))
+		(apply #'+ (map 'list #'(lambda (x) (+ 2 (count #\Newline x))) nodes))))
+	     ;; TODO: Fix this constant value (get a width?)
+	     (estimated-width width)
+	     (height-offset 0))
+	(labels ((value->users (name)
+		   (declare (type string name))
+		   (loop for node in (graph-proto-node graph-proto)
+			 for position upfrom 0
+			 if (find name (node-proto-input node) :test #'equal)
+			   collect (cons (nth position nodes) node)))
+		 (width-of (text)
+		   (let ((lines (cl-ppcre:split (format nil "~%") text)))
+		     (length (or (nth 1 lines) (nth 0 lines)))))
+		 (embody! (easel x y text &optional (n 2))
+		   (multiple-value-bind (xp yp) (values 0 0)
+		     (loop for line in (cl-ppcre:split (format nil "~%") text)
+			   for yi upfrom y
+			   do (cl-easel:carve-text easel line yi x)
+			      (setf xp x yp yi))
+		     (values (+ xp (round (/ (width-of text) n))) yp))))
+	  (with-output-to-string (out)
+	    (cl-easel:with-easel (easel (1 estimated-height estimated-width))
+	      ;; for debug
+	      (incf height-offset)
+	      (cl-easel:draw-horizontal! easel 0 0 estimated-width)
+	      
+	      ;; Draws the inputs
+	      ;; estimated_width = scale * width1 + scale * width2 + scale * width3 ...
+	      ;; estimated_width/scale = width1 + width2 + width3
+	      ;; scale = estimated_width / (width1 + width2 + width3 ..)
+	      (loop with scale = (/ estimated-width (+ (length inputs) (apply #'+ (map 'list #'width-of inputs))))
+		    with offset = 0
+		    ;; scale >= 1.0 assertion
+		    for input in inputs
+		    for ip    in (graph-proto-input graph-proto)
+		    for xi = (/ (* scale (width-of input)) 2)
+		    for yi = height-offset
+		    for k = 0;(/ (width-of input) 2)
+		    do (incf offset xi)
+		       (setf
+			(gethash (value-info-proto-name ip) name->position)
+			(apply #'make-coordinates (multiple-value-list (embody! easel (round (- offset k)) yi input))))
+		       (incf offset xi))
+	      (incf height-offset 3)
+
+	      (let ((ready-nodes
+		      `(,@(map 'list #'value-info-proto-name (graph-proto-input graph-proto))
+			,@(alexandria:hash-table-keys (initializer-map-initializer-map *initializer-map*))
+			,@(alexandria:hash-table-keys (initializer-map-sparse-initializer-map *initializer-map*))))
+		    (stashed-nodes
+		      (loop for input in (graph-proto-input graph-proto)
+			    for name = (value-info-proto-name input)
+			    append (value->users name))))
+		(labels ((ready-to-render-p (node)
+			   (let ((input (node-proto-input node)))
+			     (every #'(lambda (x) (find x ready-nodes :test #'equal)) input)))
+			 (make-branch (node)
+			   ;;          [ ] <- n_branch = length(value->users ...)
+			   ;; h-off     |
+			   ;; split ---------
+			   ;;       |   |   |
+			   ;;      p1   p2  p3 (coodinates)
+			   ;;      n1   n2  n3 (next_p)
+
+			   ;; p1 p2 p3 h-offの次って仮定してない？
+			   ;; 何手でいけるか
+			   ;; next_p=FalseもStashする
+			
+			   
+			   
+			   )
+			 (step-stashed-nodes (&aux (offset 0))
+			   ;; Pop until offset reaches width
+			   (let* ((not-ready)
+				  (next-nodes)
+				  (nodes (loop while (and (<= offset estimated-width) (not (null stashed-nodes)))
+					       for tgt = (pop stashed-nodes)
+					       if (ready-to-render-p (cdr tgt))
+						 collect
+						 (progn
+						   (incf offset (width-of (caar stashed-nodes)))
+						   ;; keep clearance of the edge.
+						   (incf offset 2.5)
+						   tgt)
+					       else
+						 do (push tgt not-ready)))
+				  (highest-height 0))
+			     (setf stashed-nodes `(,@not-ready ,@stashed-nodes))
+
+			     ;; Bunch nodes
+			     (incf height-offset 2)
+
+			     ;; Collected nodes are displayed in the line in the same way as inputs
+
+			     (loop with scale = (/ estimated-width (+ (length nodes) (apply #'+ (map 'list (alexandria:compose #'width-of #'car) nodes))))
+				   with xoffset = 0
+				   for (str . node) in nodes
+				   for xi = (/ (* scale (width-of str)) 2)
+				   for yi = height-offset
+				   for outputs = (node-proto-output node)
+				   for k = (/ (width-of str) 2)
+				   do (incf xoffset xi)
+				      ;; TODO: connect the arrows here
+				      (multiple-value-bind (x y)
+					  (embody! easel (round (- xoffset k)) yi str (length outputs))
+					(dolist (out outputs)
+					  (push out ready-nodes)
+					  (setf (gethash out name->position) (make-coordinates x y)
+						next-nodes `(,@next-nodes ,@(value->users out)))))
+				      (incf xoffset xi)
+				      (setf highest-height
+					    (max highest-height (length (cl-ppcre:split (format nil "~%") str)))))
+			     
+			     (incf height-offset highest-height)
+
+			     (setf stashed-nodes `(,@stashed-nodes ,@next-nodes))
+			     (when stashed-nodes
+			       (step-stashed-nodes)))))		  
+		  ;; 1. add stashed-nodes
+		  ;; 2. given width if the nodes cannot be displaed once stash them
+		  ;; 3. display until stashed nodes are used
+		  ;; 4. add new users
+		  (step-stashed-nodes)))
+	      
+	      (cl-easel:realize easel)
+	      (format out "~a" easel))))))))
       
 ;; (defmethod connect-node (from node to))
