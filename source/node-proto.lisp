@@ -130,7 +130,9 @@
   -------
      ^ indicates here (from where the next node should start an arrow)
 "
-  (points `(,(cons x y)) :type list))
+  (points `(,(cons x y)) :type list)
+  (bx x) ;; branching point
+  (by (1+ y)))
 
 (cl-annot-revisit:export
   (defun viewnode (graph-proto &key (width 35))
@@ -201,44 +203,47 @@
 		(labels ((ready-to-render-p (node)
 			   (let ((input (node-proto-input node)))
 			     (every #'(lambda (x) (find x ready-nodes :test #'equal)) input)))
-			 (make-branch (node)
+			 (connect-node (node user)
+			   (declare (type string node user))
 			   ;;          [ ] <- n_branch = length(value->users ...)
 			   ;; h-off     |
 			   ;; split ---------
 			   ;;       |   |   |
-			   ;;      p1   p2  p3 (coodinates)
+			   ;;      p1   p2  p3 (coodinates, user)
 			   ;;      n1   n2  n3 (next_p)
 
 			   ;; p1 p2 p3 h-offの次って仮定してない？
 			   ;; 何手でいけるか
 			   ;; next_p=FalseもStashする
-			
-			   
-			   
-			   )
+
+			   (let ((cdn (gethash node name->position))
+				 (usr (gethash user name->position)))
+			     (when (and cdn usr)
+			       (cl-easel:draw-vertical! easel (c-bx usr) (1- (c-by usr)) (1+ (c-by usr)))
+			       )))
+			 
 			 (step-stashed-nodes (&aux (offset 0))
 			   ;; Pop until offset reaches width
 			   (let* ((not-ready)
 				  (next-nodes)
 				  (nodes (loop while (and (<= offset estimated-width) (not (null stashed-nodes)))
 					       for tgt = (pop stashed-nodes)
-					       if (ready-to-render-p (cdr tgt))
+					       for w = (+ 2.5 (width-of (car tgt))) ;; keep clearance of the edge.
+					       if (and (ready-to-render-p (cdr tgt)) (<= (+ offset w) estimated-width))
 						 collect
 						 (progn
-						   (incf offset (width-of (caar stashed-nodes)))
-						   ;; keep clearance of the edge.
-						   (incf offset 2.5)
+						   (incf offset w)
 						   tgt)
 					       else
 						 do (push tgt not-ready)))
 				  (highest-height 0))
 			     (setf stashed-nodes `(,@not-ready ,@stashed-nodes))
 
+			     (assert nodes () "Increase the number of width")
 			     ;; Bunch nodes
 			     (incf height-offset 2)
 
 			     ;; Collected nodes are displayed in the line in the same way as inputs
-
 			     (loop with scale = (/ estimated-width (+ (length nodes) (apply #'+ (map 'list (alexandria:compose #'width-of #'car) nodes))))
 				   with xoffset = 0
 				   for (str . node) in nodes
@@ -249,20 +254,23 @@
 				   do (incf xoffset xi)
 				      ;; TODO: connect the arrows here
 				      (multiple-value-bind (x y)
-					  (embody! easel (round (- xoffset k)) yi str (length outputs))
-					(dolist (out outputs)
-					  (push out ready-nodes)
-					  (setf (gethash out name->position) (make-coordinates x y)
-						next-nodes `(,@next-nodes ,@(value->users out)))))
+					  (embody! easel (round (- xoffset k)) yi str (1+ (length outputs)))
+					(loop with s = (/ (width-of str) (length outputs))
+					      for out in outputs
+					      for n upfrom 0
+					      do (push out ready-nodes)
+						 (setf (gethash out name->position) (make-coordinates (+ x (* n s)) y)
+						       next-nodes `(,@next-nodes ,@(value->users out)))
+						 (dolist (input (node-proto-input node))
+						   (connect-node input out))))
 				      (incf xoffset xi)
 				      (setf highest-height
 					    (max highest-height (length (cl-ppcre:split (format nil "~%") str)))))
 			     
 			     (incf height-offset highest-height)
-
 			     (setf stashed-nodes `(,@stashed-nodes ,@next-nodes))
 			     (when stashed-nodes
-			       (step-stashed-nodes)))))		  
+			       (step-stashed-nodes)))))
 		  ;; 1. add stashed-nodes
 		  ;; 2. given width if the nodes cannot be displaed once stash them
 		  ;; 3. display until stashed nodes are used
