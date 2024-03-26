@@ -1,5 +1,5 @@
 
-CL            := ros
+CL            := qlot exec ros
 QUICKLOAD     := --load cl-onnx.asd --eval '(progn (load "cl-onnx.asd") (ql:quickload :cl-onnx))'
 PROTOC := protoc
 PYTHON := python
