@@ -15,6 +15,10 @@ Common Lisp library for comfortably handling ONNX graphs on REPL.
 
 - [ ] make maintainable
 
+- [ ] utils (and useful macros) for accessing onnx graph in common lisp
+
+- [ ] (onnx:view ...) -> window
+
 ## Requirements (TODO)
 
 - protobuf

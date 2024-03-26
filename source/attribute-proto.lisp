@@ -20,4 +20,9 @@
 	      (graphs list t t t)
 	      (type-protos list t t t))
 
-
+(defmethod read-attr ((proto Attribute-Proto))
+  (ecase (attribute-proto-type proto)
+    (:INT
+     (attribute-proto-i proto))
+    (:FLOAT
+     (attribute-proto-f proto))))

@@ -13,6 +13,7 @@
 	      (quantization-annotation tensor-annotation t t t)
 	      (metadata-props string-string-entry-proto t t t))
 
+
 (defmethod visualize ((proto Graph-Proto))
   "
   |- Gemm ---------------------------|
@@ -26,7 +27,6 @@
 	       (with-output-to-string (out)
 		 (dotimes (i n) (princ " "out))
 		 (format out "~a" x)))))
-    
     (let* ((graph-name (graph-proto-name proto))
 	   (inputs
 	     (map
@@ -46,14 +46,12 @@
 	       ,@inputs
 	       "outputs :"
 	       ,@outputs))
-	   (width (+ 4 (apply #'max (map 'list #'length things-to-display))))
-	   (height (+ 2 (length things-to-display))))
+	   (width (+ 2 (apply #'max (map 'list #'length things-to-display))))
+	   (height (+ 1 (length things-to-display))))
       
       (with-output-to-string (stream)
 	(cl-easel:with-easel (canvas (1 height width))
-	  ;;(cl-easel:draw-horizontal! canvas 0 2 2)
-
-	  ;; Draw the box
+	  ;; Draws the box
 	  (cl-easel:draw-horizontal! canvas 0           0 width)
 	  (cl-easel:draw-horizontal! canvas (1- height) 0 width)
 

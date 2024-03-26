@@ -33,7 +33,10 @@
 	       (:file "operator-set-id-proto")
 	       (:file "function-proto")
 	       (:file "visualize")
-	       (:file "io")))
+	       (:file "io")
+	       (:file "doc")
+	       (:file "nicknames")
+	       (:file "graph-utils")))
 
 (asdf:defsystem "cl-onnx/test"
   :author "hikettei"

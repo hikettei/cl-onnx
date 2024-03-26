@@ -1,11 +1,13 @@
 
 (in-package :cl-onnx)
 
+  
 (defgeneric protobuf->onnx (proto)
   (:documentation "Protobuf Object -> cl-onnx structure"))
 
 (defgeneric onnx->protobuf (onnx-object)
   (:documentation "cl-onnx structure -> protobuf object"))
+
 
 (defmacro define-proto ((name protobuf-name) &rest attributes)
   "attributes = (name type-in-lisp onnx-protobuf-obj-p optional-p listp)"
@@ -27,9 +29,9 @@
 	   (defstruct (,name
 		       (:constructor
 			   ,constructor
-			   ,(loop for attrs in attributes
-				  for attr-name = (nth 0 attrs)
-				  collect attr-name)))
+			   (,@(loop for attrs in attributes
+				    for attr-name = (nth 0 attrs)
+				    collect attr-name))))
 	     ,@(loop for attrs in attributes
 		     for attr-name = (nth 0 attrs)
 		     for type      = (nth 1 attrs)
