@@ -194,8 +194,11 @@
 			 (or
 			  (and
 			   (find (c-bx to-cdn) ranked :test #'(lambda (x y) (<= (abs (- x y)) 1)))
-			   (c-bx to-cdn))			  
-			  (car ranked)))))))
+			   (c-bx to-cdn))
+			  ;; If align-to-the-nearst strategy failed,
+			  ;; it is better to place the arrow in a distant location.
+			  (nth 1 (reverse ranked))
+			  (car (reverse ranked))))))))
 	   (try-vertical ()
 
 	     )
@@ -366,22 +369,30 @@
 				   (find-optimal-route from to (alexandria:hash-table-values name->position))
 				 (case strategy
 				   (:horizontal
-				    (format t "~a -> ~a is ~a~%" node user strategy)
-				    (multiple-value-bind (a b)
+				    ;;(format t "~a -> ~a is ~a~%" node user strategy)
+				    (multiple-value-bind (a b |y1+y2|/2)
 					(values
 					 (min (c-bx from) points)
-					 (max (c-bx from) points))
+					 (max (c-bx from) points)
+					 (floor (/ (- (c-y to) (+ (c-y from) (c-b from))) 2)))
 				      (when (> (abs (- a b)) 1)
 					(cl-easel:draw-horizontal!
 					 easel
-					 (+ k (c-by from))
-					 a (1+ b)))
-				      (format t "~a -> ~a~%" (+ (c-y from) (c-b from)) (c-y to))
+					 (+ |y1+y2|/2 (c-by from))
+					 a
+					 (1+ b))
+					(when (> |y1+y2|/2 k)
+					  (cl-easel:draw-vertical!
+					   easel
+					   (c-bx from)
+					   (c-by from)
+					   (+ |y1+y2|/2 (c-by from) k))))
+
 				      (cl-easel:draw-vertical!
 				       easel
 				       points
-				       (+ k (c-y from) (c-b from))
-				       (1+ (c-y to)))))
+				       (+ |y1+y2|/2 (c-by from))
+				       (1+ (c-y to)))))				   
 				   (:vertical
 
 				    )
