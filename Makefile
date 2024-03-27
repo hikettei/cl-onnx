@@ -1,4 +1,5 @@
 
+RLWRAP        := rlwrap
 CL            := qlot exec ros
 QUICKLOAD     := --load cl-onnx.asd --eval '(progn (load "cl-onnx.asd") (ql:quickload :cl-onnx))'
 PROTOC := protoc
@@ -33,4 +34,8 @@ build: install_deps install_cl_protobufs ## Builds onnx.proto
 .PHONY: test
 test: build export_dummy_graph ## Executes the test harness.
 	$(CL) $(QUICKLOAD) --eval '(asdf:test-system :cl-onnx)'
+
+.PHONY: repl
+repl: build export_dummy_graph ## Runs REPL
+	$(RLWRAP) $(CL) run
 
