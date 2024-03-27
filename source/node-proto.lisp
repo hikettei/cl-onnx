@@ -366,6 +366,7 @@
       (let* ((*initializer-map* (make-initializer-map graph-proto))
 	     (nodes  (map 'list #'visualize (graph-proto-node graph-proto)))
 	     (inputs (map 'list (alexandria:compose #'write-in-box #'value-info-proto-name) (graph-proto-input graph-proto)))
+	     (outputs (map 'list (alexandria:compose #'write-in-box #'value-info-proto-name) (graph-proto-output graph-proto)))
 	     (name->position (make-hash-table :test #'equal))
 	     (estimated-height
 	       (+
@@ -589,7 +590,6 @@
 				       for outputs = (node-proto-output node)
 				       for k = (/ (width-of str) 2)
 				       do (incf xoffset xi)
-					  ;; TODO: connect the arrows here
 					  (multiple-value-bind (x y)
 					      (embody! easel (round (- xoffset k)) yi str (1+ (length outputs)))
 					    (loop with s = (/ (width-of str) (length outputs))
@@ -604,7 +604,9 @@
 							    (width-of str)
 							    (length (cl-ppcre:split (format nil "~%") str))
 							    (+ x (* n s)) y)
-							   next-nodes `(,@next-nodes ,@(value->users out)))
+							   next-nodes `(,@next-nodes ,@(value->users out))
+							   (gethash (node-proto-name node) name->position)
+							   (gethash out name->position))
 						     (dolist (input (node-proto-input node))
 						       ;; If the input is constnat, also needs to be displayed
 						       (let ((const (read-constant input)))
@@ -633,7 +635,28 @@
 		       (when (null (find (node-proto-name x) seen))
 			 (when (null (value->users (node-proto-name x)))
 			   (warn "~a is isolated from the graph." (node-proto-name x)))))
-		   (graph-proto-node graph-proto))))
+		   (graph-proto-node graph-proto))
+
+		  (incf height-offset node-to-node-size)
+
+		  ;; Rendering the outputs
+		  (loop with scale = (/ estimated-width (+ (length outputs) (apply #'+ (map 'list #'width-of outputs))))
+			with offset = 0
+			;; scale >= 1.0 assertion
+			for output in outputs
+			for ip in (graph-proto-output graph-proto)
+			for xi = (/ (* scale (width-of output)) 2)
+			for yi = height-offset
+			for k = 1;;(/ (width-of output) 2)
+			do (incf offset xi)
+			   (multiple-value-bind (bx by)
+			       (embody! easel (floor (- offset k)) yi output)
+			     (setf
+			      (gethash (value-info-proto-name ip) name->position)
+			      (make-cdn (value-info-proto-name ip) (floor offset) yi (width-of output) (length (cl-ppcre:split (format nil "~%") output)) bx by)))
+			   (dolist (from (user->values (value-info-proto-name ip)))
+			     (connect-node (node-proto-name (cdr from)) (value-info-proto-name ip)))
+			   (incf offset xi))))
 	      
 	      (cl-easel:realize easel)
 	      (format out "~%~a" easel))))))))
