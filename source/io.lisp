@@ -19,3 +19,4 @@
   (let ((protobuf (onnx->protobuf model-proto)))
     protobuf)
   nil)
+

@@ -21,8 +21,11 @@
 	      (type-protos list t t t))
 
 (defmethod read-attr ((proto Attribute-Proto))
-  (ecase (attribute-proto-type proto)
+  (case (attribute-proto-type proto)
     (:INT
      (attribute-proto-i proto))
     (:FLOAT
-     (attribute-proto-f proto))))
+     (attribute-proto-f proto))
+    (T
+     (warn "read-attr: not implemented: ~a" (attribute-proto-type proto))
+     "?")))

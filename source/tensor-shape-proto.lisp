@@ -22,5 +22,3 @@
 		   (visualize dim)
 		   ", "))))))
 
-
-;; TODO: defgeneric shape mitaina utils wo tukuru
