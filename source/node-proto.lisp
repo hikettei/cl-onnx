@@ -206,6 +206,12 @@
 			 for position upfrom 0
 			 if (find name (node-proto-input node) :test #'equal)
 			   collect (cons (nth position nodes) node)))
+		 (user->values (name)
+		   (declare (type string name))
+		   (loop for node in (graph-proto-node graph-proto)
+			 for position upfrom 0
+			 if (find name (node-proto-output node) :test #'equal)
+			   collect (cons (nth position nodes) node)))	   
 		 (embody! (easel x y text &optional (n 2))
 		   (multiple-value-bind (xp yp) (values 0 0)
 		     (loop for line in (cl-ppcre:split (format nil "~%") text)
@@ -230,7 +236,7 @@
 		    for ip    in (graph-proto-input graph-proto)
 		    for xi = (/ (* scale (width-of input)) 2)
 		    for yi = height-offset
-		    for k = 0;(/ (width-of input) 2)
+		    for k = 0;;(/ (width-of input) 2)
 		    do (incf offset xi)
 		       (multiple-value-bind (bx by)
 			   (embody! easel (floor (- offset k)) yi input)
@@ -249,10 +255,21 @@
 			    for name = (value-info-proto-name input)
 			    append (value->users name)))
 		    (seen))
-		(labels ((ready-p (name)
-			   (find name ready-nodes :test #'equal))
+		(labels ((read-constant (name)
+			   ;; e.g.: name = ConstantXXX
+			   (let ((users (user->values name)))
+			     (when (= (length users) 1)
+			       (and
+				(equal "Constant" (node-proto-op-type (cdr (car users))))))))
+			 (ready-p (name)
+			   (or
+			    (find name ready-nodes :test #'equal)
+			    (get-initializer-map *initializer-map* name)
+			    ;; ConstantNode arent displayed and recognised as ready
+			    (read-constant name)))
 			 (ready-to-render-p (node)
 			   (let ((input (node-proto-input node)))
+			     (node-proto-name node)
 			     (every #'ready-p input)))
 			 (connect-node (node user)
 			   (declare (type string node user))
@@ -262,31 +279,26 @@
 			   ;;       |   |   |
 			   ;;      p1   p2  p3 (coodinates, user)
 			   ;;      n1   n2  n3 (next_p)
-
-			   ;; p1 p2 p3 h-offの次って仮定してない？
-			   ;; 何手でいけるか
-			   ;; next_p=FalseもStashする
-
 			   (let ((cdn (gethash node name->position))
 				 (usr (gethash user name->position)))
 			     (when (and cdn usr (null (c-seen cdn)))
 			       (format t "~a -> ~a~%" node user)
 			       (cl-easel:draw-vertical! easel (c-bx cdn) (- (c-by cdn) 0) (+ 2 (c-by cdn)))
 			       (setf (c-seen cdn) t)
-
-			       ;; 
+			       ;; arrowを描画する
 			       )))
 			 
-			 (step-stashed-nodes (&optional (failed nil) &aux (offset 0))
+			 (step-stashed-nodes (&aux (offset 0))
 			   ;; Pop until offset reaches width
 			   (let* ((not-ready)
 				  (next-nodes)
 				  (nodes (loop while (and (<= offset estimated-width) (not (null stashed-nodes)))
 					       for tgt = (pop stashed-nodes)
 					       for w = (+ 2.5 (width-of (car tgt))) ;; keep clearance of the edge.
+					       for notseen-p = (not (find (node-proto-name (cdr tgt)) seen :test #'equal))
 					       if (and
 						   (ready-to-render-p (cdr tgt))
-						   (not (find (node-proto-name (cdr tgt)) seen :test #'equal))
+						   notseen-p
 						   (<= (+ offset w) estimated-width))
 						 collect
 						 (progn
@@ -294,8 +306,9 @@
 						   (incf offset w)
 						   tgt)
 					       else
-						 do (push tgt not-ready)))
+						 do (when notseen-p (push tgt not-ready))))
 				  (highest-height 0))
+
 			     (setf stashed-nodes `(,@not-ready ,@stashed-nodes))
 
 			     (when nodes
@@ -337,11 +350,7 @@
 			       (incf height-offset highest-height)
 			       (setf stashed-nodes `(,@stashed-nodes ,@next-nodes))
 			       (when stashed-nodes
-				 (step-stashed-nodes)))
-
-			     (when (and stashed-nodes (not failed))
-			       (step-stashed-nodes t))
-			     )))
+				 (step-stashed-nodes))))))
 		  ;; 1. add stashed-nodes
 		  ;; 2. given width if the nodes cannot be displaed once stash them
 		  ;; 3. display until stashed nodes are used
