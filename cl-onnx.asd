@@ -20,12 +20,13 @@
 	       :cl-ppcre
 	       :alexandria
 	       :cl-easel
-	       :cl-pack)
+	       :cl-pack
+	       :cl-charms)
   :pathname "source"
   :components ((:file "package")
 	       (:file "utils")
 	       (:file "facet")
-	       (:file "model-proto")
+	       (:file "visualize")
 	       (:file "attribute-proto")
 	       (:file "value-info-proto")
 	       (:file "node-proto")
@@ -39,7 +40,7 @@
 	       (:file "type-proto")
 	       (:file "operator-set-id-proto")
 	       (:file "function-proto")
-	       (:file "visualize")
+	       (:file "model-proto")
 	       (:file "io")
 	       (:file "doc")
 	       (:file "nicknames")

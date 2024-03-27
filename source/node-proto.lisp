@@ -346,22 +346,23 @@
       (mapc #'compute (all-permutations nodes)))
     best))
 
-;; Canvas (30 x 100)
-;; TODO: Eager to know the width of the window
-;; If failed, set manually
-;; TODO
-;;  - [ ] 依存がないみたいなのを確認して次のSubgraphもStashする
-;;    eager-subgraph-mode=t
-;;  - [ ] automatically detect the optimal width
-;;  - [ ] shape
-;;  - [ ] trimming (OK)
+(defun find-the-window-width ()
+  (handler-case
+      (charms:with-curses () (charms:window-dimensions charms:*standard-window*))
+    (t nil)))
+
 (cl-annot-revisit:export
   (defun viewnode (graph-proto
 		   &key
-		     (width 35)
-		     (node-to-node-size 3))
-    "Implements Hierarchical drawing algorithm optimized for CUI, drawing the onnx graph into the REPL."
-    (declare (type Graph-Proto graph-proto))
+		     (width (or (find-the-window-width) 35))
+		     (node-to-node-size 3)
+		     (eager-subgraph-mode nil))
+    "Implements Hierarchical drawing algorithm optimized for CUI, drawing the onnx graph into the REPL.
+TODO:
+    - display the shape of tensors
+    - display the content of constant initializers"
+    (declare (type Graph-Proto graph-proto)
+	     (ignore eager-subgraph-mode))
     (with-indent (0)
       (let* ((*initializer-map* (make-initializer-map graph-proto))
 	     (nodes  (map 'list #'visualize (graph-proto-node graph-proto)))
