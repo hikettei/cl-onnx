@@ -149,27 +149,26 @@
   (by by :type fixnum)
   (seen nil))
 
-(defun find-optimal-route (from-cdn to-cdn boxes)
+(defun find-optimal-route (from-cdn to-cdn boxes stashed-arrows width)
   (declare (type coordinates from-cdn to-cdn)
 	   (type list boxes))
-  
-  ;; 矢印の描画アルゴリズム
-  ;; 並びあうノードは依存しない，したから上には依存しない
-  ;; 1. X軸で揃えようとする。
-  ;;    ( 描画したBOXの一覧をどっかにやって衝突しないか考える )
-  ;; 2. Y軸をまず揃えようとする。
-  ;;    次にXで移動して横に繋げる
-  ;; 3. X -> Y -> Xへの移動を考える。
 
+  ;; stashed-arrows (list (x y_from y_to) ...)
+  
+  ;; Since the graph is DAG, it is asserted that:
+  ;; - Side-by-side nodes are not dependent on each other.
+  ;; - Dependent nodes are placed from top to bottom.
+  
+  ;; 1. attempts to align X
+  ;; 2. attempts to align Y
+  ;; 3. stash the line to the edge
   ;; Return -> a list of coodinates
 
   (labels ((try-horizontal ()
 	     ;; Existing a, (to-cdn.bx + a) never conflicts with the area of (x + a) of each boxes -> try-horizontal
-
 	     ;; For all x where from-cdn ~ to-cdn
 	     (let* ((survived-area (range (c-bx to-cdn) (+ (c-a to-cdn) (c-x to-cdn)))))
 	       (dolist (box boxes)
-		 ;;(format t "y=(~a, ~a) ~a<=y<=~a~%" (c-y box) (+ (c-y box) (c-b box)) (+ (c-b from-cdn) (c-y from-cdn)) (c-y to-cdn))
 		 (when (and
 			(intersection
 			 (range (c-y box) (+ (c-y box) (c-b box)))
@@ -202,9 +201,31 @@
 			  (nth 1 (reverse ranked))
 			  (car (reverse ranked))))))))
 	   (try-vertical ()
+	     ;; Existing a, (to-cdn.bx + a) never conflicts with the area of (x + a) of each boxes -> try-horizontal
+	     ;; For all x where from-cdn ~ to-cdn
+	     (let* ((tgt-y-range (range (c-y to-cdn) (+ (c-y to-cdn) (c-b to-cdn)))))
+	       (dolist (box boxes)
+		 (when (and
+			(intersection
+			 (range (c-y box) (+ (c-y box) (c-b box)))
+			 (range
+			     (+ (c-b from-cdn) (c-y from-cdn))
+			     (c-y to-cdn)))
+			(not (string= (c-name box) (c-name to-cdn)))
+			(not (string= (c-name box) (c-name from-cdn))))
 
-	     )
+		   ;; If conflicts in the x -> failed
+		   (when (find (c-bx from-cdn) (range (c-x box) (+ (c-x box) (c-a box))))
+		     (return-from try-vertical))
+		   
+		   ;; subject to search: Intersection(box, area) exists
+		   (when (intersection
+			  tgt-y-range
+			  (range (c-y box) (+ (c-y box) (c-b box))))
+		     (return-from try-vertical))))
+	       (list :vertical (+ (c-y to-cdn) (floor (/ (c-b to-cdn) 2))))))	   
 	   (try-complicated ()
+	     ;; go left
 
 	     ))
 
@@ -341,7 +362,8 @@
 		      (loop for input in (graph-proto-input graph-proto)
 			    for name = (value-info-proto-name input)
 			    append (value->users name)))
-		    (seen))
+		    (seen)
+		    (stashed-arrows))
 		(labels ((ready-p (name)
 			   (or
 			    (find name ready-nodes :test #'equal)
@@ -368,7 +390,9 @@
 			       (setf (c-seen from) t))
 			     (when (and from to)
 			       (multiple-value-bind (strategy points)
-				   (find-optimal-route from to (alexandria:hash-table-values name->position))
+				   (find-optimal-route
+				    from to (alexandria:hash-table-values name->position)
+				    stashed-arrows estimated-width)
 				 (case strategy
 				   (:horizontal
 				    ;;(format t "~a -> ~a is ~a~%" node user strategy)
@@ -396,13 +420,28 @@
 				       (+ |y1+y2|/2 (c-by from))
 				       (1+ (c-y to)))))				   
 				   (:vertical
-
-				    )
+				    (cl-easel:draw-vertical!
+				     easel
+				     (c-bx from)
+				     (c-by from)
+				     (1+ points))
+				    (multiple-value-bind (a b)
+					(values
+					 (c-bx from)					 
+					 (if (<= (c-x from) (c-x to))
+					     (c-x to)
+					     (+ (c-x to) (c-a to))))
+				      (cl-easel:draw-horizontal!
+				       easel
+				       points
+				       (min a b)
+				       (max a b))))
+				   
 				   (:complicated
 
 				    )
 				   (t
-				    (format t "~a -> ~a cannot be connected" node user)
+				    (format t "~a -> ~a cannot be connected: ~a~%" node user strategy)
 				    ))))))
 			 
 			 (step-stashed-nodes (&aux (offset 0))
