@@ -177,13 +177,11 @@
 			     (+ (c-b from-cdn) (c-y from-cdn))
 			     (c-y to-cdn)))
 			(not (string= (c-name box) (c-name to-cdn)))
-			(not (string= (c-name box) (c-name from-cdn)))
-			)
+			(not (string= (c-name box) (c-name from-cdn))))
 		   ;; subject to search: Intersection(box, area) exists
 		   (let* ((obstacle-range (range (c-x box) (+ (c-a box) (c-x box)))))
 		     (mapc
 		      #'(lambda (x)
-			  (print x)
 			  (setf survived-area (remove x survived-area)))
 		      obstacle-range))))
 	       ;; the closer to the to-cdn.bx, the better
@@ -192,6 +190,10 @@
 		 (when ranked
 		   (list :horizontal
 			 (or
+			  (and
+			   (<= (abs (- (c-bx from-cdn) (c-bx to-cdn))) 1)
+			   (find (c-bx to-cdn) ranked :test #'(lambda (x y) (<= (abs (- x y)) 1)))
+			   (c-bx from-cdn))
 			  (and
 			   (find (c-bx to-cdn) ranked :test #'(lambda (x y) (<= (abs (- x y)) 1)))
 			   (c-bx to-cdn))
