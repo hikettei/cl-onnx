@@ -121,9 +121,9 @@
 
 (defstruct (coordinates
 	    (:conc-name c-)
-	    (:constructor make-cdn (x y a b bx by
+	    (:constructor make-cdn (name x y a b bx by
 				    &key
-				      (rounding #'floor)
+				      (rounding #'round)
 				    &aux
 				      (x (funcall rounding x))
 				      (y (funcall rounding y))
@@ -139,6 +139,7 @@
      ^ (bx, by) indicates here (from where the next node should start an arrow)
 "
   ;; boxes
+  (name name :type string)
   (x x :type fixnum)
   (y y :type fixnum)
   (a a :type fixnum)
@@ -166,28 +167,35 @@
 	     ;; Existing a, (to-cdn.bx + a) never conflicts with the area of (x + a) of each boxes -> try-horizontal
 
 	     ;; For all x where from-cdn ~ to-cdn
-	     (let* ((to-left-p (<= (c-bx to-cdn) (c-bx from-cdn)))
-		    (survived-area (range (c-x to-cdn) (+ (c-x to-cdn) (c-a to-cdn))))
-		    (search-target
-		      (range
-			  (if to-left-p
-			      (+ (c-x from-cdn) (c-a to-cdn))
-			      (c-x from-cdn))
-			  (if to-left-p
-			      (c-x to-cdn)
-			      (+ (c-x to-cdn) (c-a to-cdn))))))
+	     (let* ((survived-area (range (c-bx to-cdn) (+ (c-a to-cdn) (c-x to-cdn)))))
 	       (dolist (box boxes)
-		 (when (>= (c-y box) (c-y to-cdn))
+		 ;;(format t "y=(~a, ~a) ~a<=y<=~a~%" (c-y box) (+ (c-y box) (c-b box)) (+ (c-b from-cdn) (c-y from-cdn)) (c-y to-cdn))
+		 (when (and
+			(intersection
+			 (range (c-y box) (+ (c-y box) (c-b box)))
+			 (range
+			     (+ (c-b from-cdn) (c-y from-cdn))
+			     (c-y to-cdn)))
+			(not (string= (c-name box) (c-name to-cdn)))
+			(not (string= (c-name box) (c-name from-cdn)))
+			)
 		   ;; subject to search: Intersection(box, area) exists
-		   (print box)
-		   (let* ((range (range (c-x box) (+ (c-a box) (c-x box))))
-			  (subject (intersection search-target range)))
+		   (let* ((obstacle-range (range (c-x box) (+ (c-a box) (c-x box)))))
 		     (mapc
 		      #'(lambda (x)
-			  (format t "Remove: ~a~%" x)
+			  (print x)
 			  (setf survived-area (remove x survived-area)))
-		      subject))))
-	       survived-area))
+		      obstacle-range))))
+	       ;; the closer to the to-cdn.bx, the better
+	       (let* ((mid (c-bx to-cdn))
+		      (ranked (sort survived-area #'(lambda (x y) (< (abs (- mid x)) (abs (- mid y)))))))
+		 (when ranked
+		   (list :horizontal
+			 (or
+			  (and
+			   (find (c-bx to-cdn) ranked :test #'(lambda (x y) (<= (abs (- x y)) 1)))
+			   (c-bx to-cdn))			  
+			  (car ranked)))))))
 	   (try-vertical ()
 
 	     )
@@ -195,10 +203,11 @@
 
 	     ))
 
-    (or
-     (try-horizontal)
-     (try-vertical)
-     (try-complicated))))
+    (apply #'values
+	   (or
+	    (try-horizontal)
+	    (try-vertical)
+	    (try-complicated)))))
 
 (defun all-permutations (list)
   (cond ((null list) nil)
@@ -244,8 +253,13 @@
 ;; Canvas (30 x 100)
 ;; TODO: Eager to know the width of the window
 ;; If failed, set manually
+;; 依存がないみたいなのを確認して次のSubgraphもStashする
+;; eager-subgraph-mode=t
 (cl-annot-revisit:export
-  (defun viewnode (graph-proto &key (width 35))
+  (defun viewnode (graph-proto
+		   &key
+		     (width 35)
+		     (node-to-node-size 3))
     "Implements Hierarchical drawing algorithm optimized for CUI, drawing the onnx graph into the REPL."
     (declare (type Graph-Proto graph-proto))
     (with-indent (0)
@@ -308,9 +322,9 @@
 		    do (incf offset xi)
 		       (multiple-value-bind (bx by)
 			   (embody! easel (floor (- offset k)) yi input)
-		       (setf
-			(gethash (value-info-proto-name ip) name->position)
-			(make-cdn (floor offset) yi (width-of input) (length (cl-ppcre:split (format nil "~%") input)) bx by)))
+			 (setf
+			  (gethash (value-info-proto-name ip) name->position)
+			  (make-cdn (value-info-proto-name ip) (floor offset) yi (width-of input) (length (cl-ppcre:split (format nil "~%") input)) bx by)))
 		       (incf offset xi))
 	      (incf height-offset 3)
 
@@ -341,16 +355,42 @@
 			   ;;       |   |   |
 			   ;;      p1   p2  p3 (coodinates, user)
 			   ;;      n1   n2  n3 (next_p)
-			   (let ((cdn (gethash node name->position))
-				 (usr (gethash user name->position)))
-			     (when (and cdn usr (null (c-seen cdn)))
-			       (cl-easel:draw-vertical! easel (c-bx cdn) (1- (c-by cdn)) (+ 1 (c-by cdn)))
-			       (setf (c-seen cdn) t))
-			     (when (and cdn usr)
-			       (format t "~a -> ~a~%" node user)
-			       (let ((route (find-optimal-route cdn usr (alexandria:hash-table-values name->position))))
-				 (print route)
-				 ))))
+			   (let ((from (gethash node name->position))
+				 (to   (gethash user name->position))
+				 (k    (floor (/ node-to-node-size 2))))
+			     (when (and from to (null (c-seen from)))
+			       (cl-easel:draw-vertical! easel (c-bx from) (1- (c-by from)) (+ (c-by from) k 1))
+			       (setf (c-seen from) t))
+			     (when (and from to)
+			       (multiple-value-bind (strategy points)
+				   (find-optimal-route from to (alexandria:hash-table-values name->position))
+				 (case strategy
+				   (:horizontal
+				    (format t "~a -> ~a is ~a~%" node user strategy)
+				    (multiple-value-bind (a b)
+					(values
+					 (min (c-bx from) points)
+					 (max (c-bx from) points))
+				      (when (> (abs (- a b)) 1)
+					(cl-easel:draw-horizontal!
+					 easel
+					 (+ k (c-by from))
+					 a (1+ b)))
+				      (format t "~a -> ~a~%" (+ (c-y from) (c-b from)) (c-y to))
+				      (cl-easel:draw-vertical!
+				       easel
+				       points
+				       (+ k (c-y from) (c-b from))
+				       (1+ (c-y to)))))
+				   (:vertical
+
+				    )
+				   (:complicated
+
+				    )
+				   (t
+				    (format t "~a -> ~a cannot be connected" node user)
+				    ))))))
 			 
 			 (step-stashed-nodes (&aux (offset 0))
 			   ;; Pop until offset reaches width
@@ -378,7 +418,7 @@
 			     (when nodes
 			       (let ((scale (/ estimated-width (+ (length nodes) (apply #'+ (map 'list (alexandria:compose #'width-of #'car) nodes))))))
 				 ;; Bunch nodes
-				 (incf height-offset 2)
+				 (incf height-offset node-to-node-size)
 
 				 ;; weighten
 				 (setf nodes (minimize-distances nodes name->position scale))
@@ -400,7 +440,9 @@
 						  do (push out ready-nodes)
 						     (setf (gethash out name->position)
 							   (make-cdn
-							    (round (- xoffset k)) yi
+							    out
+							    (round (- xoffset k))
+							    yi
 							    (width-of str)
 							    (length (cl-ppcre:split (format nil "~%") str))
 							    (+ x (* n s)) y)
