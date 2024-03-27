@@ -149,7 +149,7 @@
   (by by :type fixnum)
   (seen nil))
 
-(defun find-optimal-route (from-cdn to-cdn boxes stashed-arrows width)
+(defun find-optimal-route (from-cdn to-cdn boxes stashed-list width)
   (declare (type coordinates from-cdn to-cdn)
 	   (type list boxes))
 
@@ -225,10 +225,80 @@
 		     (return-from try-vertical))))
 	       (list :vertical (+ (c-y to-cdn) (floor (/ (c-b to-cdn) 2))))))	   
 	   (try-complicated ()
-	     ;; go left
+	     ;; Renders the residual connection
+	     ;; TODO: Improve the algorithm
+	     (let ((go-left-p t)
+		   (go-right-p t))
+	       (dolist (box boxes)
+		 (when (and
+			(intersection
+			 (range (c-y box) (+ (c-y box) (c-b box)))
+			 (range
+			     (+ (c-b from-cdn) (c-y from-cdn))
+			     (c-y to-cdn)))
+			(not (string= (c-name box) (c-name to-cdn)))
+			(not (string= (c-name box) (c-name from-cdn))))
 
-	     ))
+		   ;; if side-by-side with regard to from-cdn
+		   (when (intersection
+			  (range (c-y box) (+ (c-y box) (c-b box)))
+			  (range (c-y from-cdn) (+ (c-y from-cdn) (c-b from-cdn))))
 
+		     ;; to left
+		     (when (intersection
+			    (range 0 (c-x from-cdn))
+			    (range (c-x box) (+ (c-x box) (c-a box))))
+		       (setf go-left-p nil))
+
+		     ;; to right
+		     (when (intersection
+			    (range (+ (c-x from-cdn) (c-a from-cdn)) width)
+			    (range (c-x box) (+ (c-x box) (c-a box))))
+		       (setf go-right-p nil)))))
+	       
+	       (when (and (null go-left-p) (null go-right-p))
+		 (return-from try-complicated))
+
+	       (let ((stashed-line-range
+		       (if go-right-p
+			   (range (+ (c-x from-cdn) (c-a from-cdn)) width)
+			   (range 0 (c-x from-cdn)))))
+		 
+		 (dolist (box boxes)		   
+		   (when (and
+			  (intersection
+			   (range (c-y box) (+ (c-y box) (c-b box)))
+			   (range
+			       (+ (c-b from-cdn) (c-y from-cdn))
+			       (c-y to-cdn)))
+			  (not (string= (c-name box) (c-name to-cdn)))
+			  (not (string= (c-name box) (c-name from-cdn))))
+		     (mapc
+		      #'(lambda (x)
+			  (setf stashed-line-range (remove x stashed-line-range)))
+		      (range (c-x box) (+ (c-x box) (c-a box))))))
+
+		 (loop for s in stashed-list
+		       for x    = (nth 0 s)
+		       for ymin = (nth 1 s)
+		       for ymax = (nth 2 s)
+		       if (intersection (range ymin ymax) (range (+ (c-b from-cdn) (c-y from-cdn)) (c-y to-cdn)))
+			 do (setf stashed-line-range (remove x stashed-line-range)))
+
+		 (setf stashed-line-range (sort stashed-line-range (if go-right-p #'> #'<)))
+
+		 (when stashed-line-range
+		   (let* ((median (floor (length stashed-line-range) 2))
+			  (x (or (nth median stashed-line-range) (car stashed-line-range))))
+		     (list :complicated
+			   (list
+			    (cons go-left-p go-right-p)
+			    x
+			    (list
+			     x
+			     (+ (c-b from-cdn) (c-y from-cdn))
+			     (c-y to-cdn))))))))))		      
+    
     (apply #'values
 	   (or
 	    (try-horizontal)
@@ -279,8 +349,12 @@
 ;; Canvas (30 x 100)
 ;; TODO: Eager to know the width of the window
 ;; If failed, set manually
-;; 依存がないみたいなのを確認して次のSubgraphもStashする
-;; eager-subgraph-mode=t
+;; TODO
+;;  - [ ] 依存がないみたいなのを確認して次のSubgraphもStashする
+;;    eager-subgraph-mode=t
+;;  - [ ] automatically detect the optimal width
+;;  - [ ] shape
+;;  - [ ] trimming
 (cl-annot-revisit:export
   (defun viewnode (graph-proto
 		   &key
@@ -395,7 +469,6 @@
 				    stashed-arrows estimated-width)
 				 (case strategy
 				   (:horizontal
-				    ;;(format t "~a -> ~a is ~a~%" node user strategy)
 				    (multiple-value-bind (a b |y1+y2|/2)
 					(values
 					 (min (c-bx from) points)
@@ -435,14 +508,47 @@
 				       easel
 				       points
 				       (min a b)
-				       (max a b))))
-				   
+				       (max a b))))				   
 				   (:complicated
+				    (multiple-value-bind (left-or-right stash-to info)
+					(apply #'values points)
 
-				    )
+				      (push info stashed-arrows)
+				      (let* ((start1 (if (cdr left-or-right)
+							 (+ (c-x from) (c-a from))
+							 (c-x from)))
+					     (start2 (if (cdr left-or-right)
+							 (+ (c-x to) (c-a to))
+							 (c-x to)))
+					     (from-mid (+ -1 (c-y from) (c-b from)))
+					     (to-mid   (c-y to)))
+					
+					(multiple-value-bind (a1 b1 a2 b2)
+					    (values
+					     (min start1 stash-to)
+					     (max start1 stash-to)
+					     (min start2 stash-to)
+					     (max start2 stash-to))
+					  
+					  (cl-easel:draw-horizontal!
+					   easel
+					   from-mid
+					   a1
+					   (1+ b1))
+
+					  (cl-easel:draw-horizontal!
+					   easel
+					   to-mid
+					   a2
+					   (1+ b2))
+					  
+					  (cl-easel:draw-vertical!
+					   easel
+					   stash-to
+					   from-mid
+					   (1+ to-mid))))))			      
 				   (t
-				    (format t "~a -> ~a cannot be connected: ~a~%" node user strategy)
-				    ))))))
+				    (format t "Failed to connect: ~a -> ~a~%" node user)))))))
 			 
 			 (step-stashed-nodes (&aux (offset 0))
 			   ;; Pop until offset reaches width
@@ -521,7 +627,13 @@
 
 		  ;; compare unseen and nodes
 		  ;; display: these nodes are not display because not topologically sorted or the width is too narrow.
-		  ))
+
+		  (mapc
+		   #'(lambda (x)
+		       (when (null (find (node-proto-name x) seen))
+			 (when (null (value->users (node-proto-name x)))
+			   (warn "~a is isolated from the graph." (node-proto-name x)))))
+		   (graph-proto-node graph-proto))))
 	      
 	      (cl-easel:realize easel)
 	      (format out "~%~a" easel))))))))
