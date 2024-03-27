@@ -71,9 +71,13 @@
 	   (width  (+ 3 (apply #'max (map 'list #'length things-to-display)))))
 
       ;; No attrs, no constants
-      (when (and (= 0 longest-name-constants)
+      (if (and (= 0 longest-name-constants)
 		 (= 0 longest-name-attrs))
-	(decf height 2))
+	  (decf height 2)
+	  (when (or (= 0 longest-name-constants)
+		    (= 0 longest-name-attrs))
+	    (decf height)))
+      
       (with-output-to-string (stream)
 	(cl-easel:with-easel (canvas (1 height width))
 	  ;; Draw the box

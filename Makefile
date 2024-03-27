@@ -18,6 +18,8 @@ help:
 .PHONY: export_dummy_graph
 export_dummy_graph: ## First creates a dummy onnx graph to perform test harness.
 	$(PYTHON) ./utils/export_dummy_graph.py
+	$(PYTHON) ./utils/export_dummy_graph1.py
+
 
 .PHONY: install_deps
 install_deps: ## Installs Quicklisp deps
