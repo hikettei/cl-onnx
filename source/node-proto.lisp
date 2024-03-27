@@ -121,7 +121,16 @@
 
 (defstruct (coordinates
 	    (:conc-name c-)
-	    (:constructor make-coordinates (x y a b bx by)))
+	    (:constructor make-cdn (x y a b bx by
+				    &key
+				      (rounding #'floor)
+				    &aux
+				      (x (funcall rounding x))
+				      (y (funcall rounding y))
+				      (a (funcall rounding a))
+				      (b (funcall rounding b))
+				      (bx (funcall rounding bx))
+				      (by (funcall rounding (1+ by))))))
   "
  (x, y)  
   -------
@@ -130,14 +139,66 @@
      ^ (bx, by) indicates here (from where the next node should start an arrow)
 "
   ;; boxes
-  (x x)
-  (y y)
-  (a a)
-  (b b)
+  (x x :type fixnum)
+  (y y :type fixnum)
+  (a a :type fixnum)
+  (b b :type fixnum)
   
-  (bx bx) ;; branching point
-  (by (1+ by))
+  (bx bx :type fixnum) ;; branching point
+  (by by :type fixnum)
   (seen nil))
+
+(defun find-optimal-route (from-cdn to-cdn boxes)
+  (declare (type coordinates from-cdn to-cdn)
+	   (type list boxes))
+  
+  ;; 矢印の描画アルゴリズム
+  ;; 並びあうノードは依存しない，したから上には依存しない
+  ;; 1. X軸で揃えようとする。
+  ;;    ( 描画したBOXの一覧をどっかにやって衝突しないか考える )
+  ;; 2. Y軸をまず揃えようとする。
+  ;;    次にXで移動して横に繋げる
+  ;; 3. X -> Y -> Xへの移動を考える。
+
+  ;; Return -> a list of coodinates
+
+  (labels ((try-horizontal ()
+	     ;; Existing a, (to-cdn.bx + a) never conflicts with the area of (x + a) of each boxes -> try-horizontal
+
+	     ;; For all x where from-cdn ~ to-cdn
+	     (let* ((to-left-p (<= (c-bx to-cdn) (c-bx from-cdn)))
+		    (survived-area (range (c-x to-cdn) (+ (c-x to-cdn) (c-a to-cdn))))
+		    (search-target
+		      (range
+			  (if to-left-p
+			      (+ (c-x from-cdn) (c-a to-cdn))
+			      (c-x from-cdn))
+			  (if to-left-p
+			      (c-x to-cdn)
+			      (+ (c-x to-cdn) (c-a to-cdn))))))
+	       (dolist (box boxes)
+		 (when (>= (c-y box) (c-y to-cdn))
+		   ;; subject to search: Intersection(box, area) exists
+		   (print box)
+		   (let* ((range (range (c-x box) (+ (c-a box) (c-x box))))
+			  (subject (intersection search-target range)))
+		     (mapc
+		      #'(lambda (x)
+			  (format t "Remove: ~a~%" x)
+			  (setf survived-area (remove x survived-area)))
+		      subject))))
+	       survived-area))
+	   (try-vertical ()
+
+	     )
+	   (try-complicated ()
+
+	     ))
+
+    (or
+     (try-horizontal)
+     (try-vertical)
+     (try-complicated))))
 
 (defun all-permutations (list)
   (cond ((null list) nil)
@@ -185,7 +246,7 @@
 ;; If failed, set manually
 (cl-annot-revisit:export
   (defun viewnode (graph-proto &key (width 35))
-    "Renders the computational graph"
+    "Implements Hierarchical drawing algorithm optimized for CUI, drawing the onnx graph into the REPL."
     (declare (type Graph-Proto graph-proto))
     (with-indent (0)
       (let* ((*initializer-map* (make-initializer-map graph-proto))
@@ -218,7 +279,14 @@
 			   for yi upfrom y
 			   do (cl-easel:carve-text easel line yi x)
 			      (setf xp x yp yi))
-		     (values (+ xp (floor (/ (width-of text) n))) yp))))
+		     (values (+ xp (floor (/ (width-of text) n))) yp)))
+		 (read-constant (name)
+		   ;; e.g.: name = ConstantXXX
+		   (let ((users (user->values name)))
+		     (when (= (length users) 1)
+		       (and
+			(equal "Constant" (node-proto-op-type (cdr (car users))))
+			(cdr (car users)))))))
 	  (with-output-to-string (out)
 	    (cl-easel:with-easel (easel (1 estimated-height estimated-width))
 	      ;; for debug
@@ -242,7 +310,7 @@
 			   (embody! easel (floor (- offset k)) yi input)
 		       (setf
 			(gethash (value-info-proto-name ip) name->position)
-			(make-coordinates xi yi (width-of input) (length (cl-ppcre:split (format nil "~%") input)) bx by)))
+			(make-cdn (floor offset) yi (width-of input) (length (cl-ppcre:split (format nil "~%") input)) bx by)))
 		       (incf offset xi))
 	      (incf height-offset 3)
 
@@ -255,13 +323,7 @@
 			    for name = (value-info-proto-name input)
 			    append (value->users name)))
 		    (seen))
-		(labels ((read-constant (name)
-			   ;; e.g.: name = ConstantXXX
-			   (let ((users (user->values name)))
-			     (when (= (length users) 1)
-			       (and
-				(equal "Constant" (node-proto-op-type (cdr (car users))))))))
-			 (ready-p (name)
+		(labels ((ready-p (name)
 			   (or
 			    (find name ready-nodes :test #'equal)
 			    (get-initializer-map *initializer-map* name)
@@ -282,11 +344,13 @@
 			   (let ((cdn (gethash node name->position))
 				 (usr (gethash user name->position)))
 			     (when (and cdn usr (null (c-seen cdn)))
+			       (cl-easel:draw-vertical! easel (c-bx cdn) (1- (c-by cdn)) (+ 1 (c-by cdn)))
+			       (setf (c-seen cdn) t))
+			     (when (and cdn usr)
 			       (format t "~a -> ~a~%" node user)
-			       (cl-easel:draw-vertical! easel (c-bx cdn) (- (c-by cdn) 0) (+ 2 (c-by cdn)))
-			       (setf (c-seen cdn) t)
-			       ;; arrowを描画する
-			       )))
+			       (let ((route (find-optimal-route cdn usr (alexandria:hash-table-values name->position))))
+				 (print route)
+				 ))))
 			 
 			 (step-stashed-nodes (&aux (offset 0))
 			   ;; Pop until offset reaches width
@@ -335,14 +399,18 @@
 						  for n upfrom 0
 						  do (push out ready-nodes)
 						     (setf (gethash out name->position)
-							   (make-coordinates
-							    xi yi
+							   (make-cdn
+							    (round (- xoffset k)) yi
 							    (width-of str)
 							    (length (cl-ppcre:split (format nil "~%") str))
 							    (+ x (* n s)) y)
 							   next-nodes `(,@next-nodes ,@(value->users out)))
 						     (dolist (input (node-proto-input node))
-						       (connect-node input out))))
+						       ;; If the input is constnat, also needs to be displayed
+						       (let ((const (read-constant input)))
+							 (if const
+							     nil;; nil TODO: Display the value of constant.
+							     (connect-node input out))))))
 					  (incf xoffset xi)
 					  (setf highest-height
 						(max highest-height (length (cl-ppcre:split (format nil "~%") str))))))
@@ -362,6 +430,6 @@
 		  ))
 	      
 	      (cl-easel:realize easel)
-	      (format out "~a" easel))))))))
+	      (format out "~%~a" easel))))))))
 
 ;; (defmethod connect-node (from node to))

@@ -1,7 +1,7 @@
 
 # cl-onnx
 
-Common Lisp library for comfortably handling ONNX graphs on REPL.
+CLI-Complete ONNX Binding and graph manipulator for Common Lisp.
 
 ## Workload
 
@@ -19,6 +19,18 @@ Common Lisp library for comfortably handling ONNX graphs on REPL.
 
 - [ ] (onnx:view ...) -> window
 
+## Background
+
+- Emacs + SLIME Complete Developments since I am too lazy to run netron (esp when the graph is enough small.)
+
+## Disclaimer
+
+- Never use it for products as we cannot guarantee its quality.
+    
+- It is packed with utilities and functions used for personal development, so it is less tolerant of onnx updates.
+
+- The renderer could not use ncurses to complete in Emacs. I gonna use my own engine.
+
 ## Requirements (TODO)
 
 - protobuf
@@ -27,9 +39,6 @@ Common Lisp library for comfortably handling ONNX graphs on REPL.
 
 - confirmed working on Linux/macOS
 
-## Memo
-
-- RendererとかはProtoを読んであとはマクロで自動生成してるから，ONNX専用にする必要もない気がする
 
 ## Installing (TODO)
 

@@ -20,8 +20,7 @@
 	       :cl-ppcre
 	       :alexandria
 	       :cl-easel
-	       :cl-pack
-	       :cl-charm)
+	       :cl-pack)
   :pathname "source"
   :components ((:file "package")
 	       (:file "utils")
