@@ -354,7 +354,7 @@
 ;;    eager-subgraph-mode=t
 ;;  - [ ] automatically detect the optimal width
 ;;  - [ ] shape
-;;  - [ ] trimming
+;;  - [ ] trimming (OK)
 (cl-annot-revisit:export
   (defun viewnode (graph-proto
 		   &key
@@ -404,9 +404,9 @@
 			(cdr (car users)))))))
 	  (with-output-to-string (out)
 	    (cl-easel:with-easel (easel (1 estimated-height estimated-width))
-	      ;; for debug
-	      (incf height-offset)
-	      (cl-easel:draw-horizontal! easel 0 0 estimated-width)
+	      ;; to understand the width of the windows
+	      ;; (incf height-offset)
+	      ;; (cl-easel:draw-horizontal! easel 0 0 estimated-width)
 	      
 	      ;; Draws the inputs
 	      ;; estimated_width = scale * width1 + scale * width2 + scale * width3 ...
@@ -657,8 +657,12 @@
 			   (dolist (from (user->values (value-info-proto-name ip)))
 			     (connect-node (node-proto-name (cdr from)) (value-info-proto-name ip)))
 			   (incf offset xi))))
-	      
+	      (incf height-offset node-to-node-size)
+	      (incf height-offset 3)
 	      (cl-easel:realize easel)
-	      (format out "~%~a" easel))))))))
+	      (let ((result (cl-ppcre:split (format nil "~%") (format nil "~%~a" easel))))
+		(dolist (line (subseq result 0 height-offset))
+		  (format out "~a~%" line))))))))))
+		
 
-;; (defmethod connect-node (from node to))
+
