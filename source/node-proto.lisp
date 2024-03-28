@@ -373,11 +373,12 @@ TODO:
 	     (inputs (map 'list (alexandria:compose #'write-in-box #'value-info-proto-name) (graph-proto-input graph-proto)))
 	     (outputs (map 'list (alexandria:compose #'write-in-box #'value-info-proto-name) (graph-proto-output graph-proto)))
 	     (name->position (make-hash-table :test #'equal))
+	     ;; the tallest case for the height
 	     (estimated-height
 	       (+
-		2
+		6 ;; the height of input + output
 		(* 3 (length nodes))
-		(apply #'+ (map 'list #'(lambda (x) (+ 2 (count #\Newline x))) nodes))))
+		(apply #'+ (map 'list #'(lambda (x) (+ node-to-node-size (count #\Newline x))) nodes))))
 	     ;; TODO: Fix this constant value (get a width?)
 	     (estimated-width width)
 	     (height-offset 0))
@@ -666,8 +667,10 @@ TODO:
 	      (incf height-offset 3)
 	      (cl-easel:realize easel)
 	      (let ((result (cl-ppcre:split (format nil "~%") (format nil "~%~a" easel))))
-		(dolist (line (subseq result 0 height-offset))
-		  (format out "~a~%" line))))))))))
+		(if (<= (length result) height-offset)
+		    (format out "~a~%" easel)
+		    (dolist (line (subseq result 0 height-offset))
+		      (format out "~a~%" line)))))))))))
 		
 
 
