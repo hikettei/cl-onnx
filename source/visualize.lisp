@@ -10,8 +10,9 @@
      ,@body))
 
 ;; TODO: autogenerate print-object
+(defparameter *visualize* t)
 (defmethod visualize :around (proto)
-  (let ((visualized (format nil "~a" (call-next-method))))
+  (let ((visualized (format nil "~a" (if *visualize* (call-next-method) (format nil "<~a>" (class-name (class-of proto)))))))
     (with-output-to-string (out)
       (loop with
 	      indentation1 string = (apply
