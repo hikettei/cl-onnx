@@ -74,7 +74,7 @@
 	     (read-int ()
 	       (intbytes:octets->int in-buffer n-byte)))
 	(declare (inline read-float32 read-float64))
-	(ecase dtype
+	(case dtype
 	  (:double
 	   (locally (declare (type (simple-array single-float (*)) storage))
 	     (loop for i fixnum upfrom 0 below to by step
