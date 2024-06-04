@@ -30,14 +30,16 @@
 		       (:constructor
 			   ,constructor
 			   (,@(loop for attrs in attributes
-				    for attr-name = (nth 0 attrs)
+				    for attr-name1 = (nth 0 attrs)
+				    for attr-name = (if (listp attr-name1) (car attr-name1) attr-name1)
 				    collect attr-name))))
 	     ,@(loop for attrs in attributes
-		     for attr-name = (nth 0 attrs)
+		     for attr-name1 = (nth 0 attrs)
 		     for type      = (nth 1 attrs)
 		     for onnx-p    = (nth 2 attrs)
 		     for optionalp = (nth 3 attrs)
 		     for listp     = (nth 4 attrs)
+		     for attr-name = (if (listp attr-name1) (car attr-name1) attr-name1)
 		     collect
 		     `(,attr-name
 		       ,(if listp
@@ -56,12 +58,14 @@
 	 (defmethod protobuf->onnx ((proto ,protobuf-name))
 	   (,constructor
 	    ,@(loop for attrs in attributes
-		    for attr-name = (nth 0 attrs)
+		    for attr-name1 = (nth 0 attrs)
 		    for type      = (nth 1 attrs)
 		    for onnx-p    = (nth 2 attrs)
 		    for optionalp = (nth 3 attrs)
 		    for listp     = (nth 4 attrs)
-		    for reader = `(slot-value proto ',(make-reader attr-name))
+		    for attr-name = (if (listp attr-name1) (car attr-name1) attr-name1)
+		    for read-name = (if (listp attr-name1) (second attr-name1) attr-name1)
+		    for reader = `(slot-value proto ',(make-reader read-name))
 		    collect
 		    (if listp
 			`(map 'list #'(lambda (x) ,(if onnx-p `(protobuf->onnx x) 'x)) ,reader)
@@ -72,11 +76,12 @@
 	 (defmethod onnx->protobuf ((onnx-object ,name))
 	   (,protobuf-constructor
 	    ,@(loop for attrs in attributes
-		    for attr-name = (nth 0 attrs)
+		    for attr-name1 = (nth 0 attrs)
 		    for onnx-p    = (nth 2 attrs)
 		    for optionalp = (nth 3 attrs)
 		    for listp     = (nth 4 attrs)
-		    for key       = (intern (symbol-name attr-name) "KEYWORD")
+		    for attr-name = (if (listp attr-name1) (car attr-name1) attr-name1)
+		    for key       = (intern (symbol-name (if (listp attr-name1) (second attr-name1) attr-name1)) "KEYWORD")
 		    append
 		    (list
 		     key
@@ -110,11 +115,12 @@
 			      for prefix in prefixes
 
 			      for offset    = (- indent-to (length prefix))
-			      for attr-name = (nth 0 attrs) ;;
+			      for attr-name1 = (nth 0 attrs) ;;
 			      for type      = (nth 1 attrs) ;;
 			      for onnx-p    = (nth 2 attrs) ;; onnx-p  -> Use (visualize ...) to render the object
 			      for optionalp = (nth 3 attrs) ;; 
 			      for listp     = (nth 4 attrs) ;; If List -> Visaluze the first element and omit subsequent elements
+			      for attr-name = (if (listp attr-name1) (car attr-name1) attr-name1)
 			      append
 			      (list
 			       "    "
