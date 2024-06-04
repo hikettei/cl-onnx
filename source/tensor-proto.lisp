@@ -60,7 +60,6 @@
 			(:int8 '(signed-byte 8))
 			(:uint4 '(unsigned-byte 4))
 			(:int4 '(signed-byte 4))))
-	   (n-byte (if (listp elem-type) (second elem-type)))
 	   (storage (make-array (apply #'* (shape proto)) :element-type elem-type))
 	   (in-buffer (make-array window :element-type (array-element-type raw-data) :displaced-to raw-data :displaced-index-offset 0)))
       (declare (type (simple-array (unsigned-byte 8) (*)) raw-data))
@@ -72,7 +71,7 @@
 	     (read-float64 ()
 	       (ieee-floats:decode-float64 (intbytes:octets->uint64 in-buffer)))
 	     (read-int ()
-	       (intbytes:octets->int in-buffer n-byte)))
+	       (intbytes:octets->int in-buffer step)))
 	(declare (inline read-float32 read-float64))
 	(case dtype
 	  (:double
@@ -86,7 +85,7 @@
 		   for n fixnum upfrom 0
 		   do (displace i) (setf (aref storage n) (the single-float (read-float32))))))
 	  (T
-	   (locally (declare (type (simple-array t (*)) storage))
+	   (progn;;locally (declare (type (simple-array t (*)) storage))
 	     (loop for i fixnum upfrom 0 below to by step
 		   for n fixnum upfrom 0
 		   do (displace i) (setf (aref storage n) (read-int))))))
