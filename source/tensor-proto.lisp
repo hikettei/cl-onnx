@@ -40,18 +40,56 @@
 
 (cl-annot-revisit:export
   (defmethod raw->array ((proto Tensor-Proto))
-    ;; TODO: Optimize
-    ;; Fix: Slow
+    (declare (optimize (speed 3)))
+    ;; TODO: complex-numbers
     (let* ((raw-data (tensor-proto-raw-data proto))
-	   (step (/ (array-total-size raw-data) (apply #'* (shape proto))))
-	   (storage (make-array (apply #'* (shape proto)) :element-type (type->lisp proto))))
+	   (to   (array-total-size raw-data))
+	   (step (/ to (the fixnum (apply #'* (the list (shape proto))))))
+	   (dtype (int->data-type (tensor-proto-data-type proto)))
+	   (window `(,step))
+	   (elem-type (ecase dtype
+			(:double 'double-float)
+			(:float 'single-float)
+			(:uint64 '(unsigned-byte 64))
+			(:int64 '(signed-byte 64))
+			(:uint32 '(unsigned-byte 32))
+			(:int32 '(signed-byte 32))
+			(:uint16 '(unsigned-byte 16))
+			(:int16 '(signed-byte 16))
+			(:uint8 '(unsigned-byte 8))
+			(:int8 '(signed-byte 8))
+			(:uint4 '(unsigned-byte 4))
+			(:int4 '(signed-byte 4))))
+	   (n-byte (if (listp elem-type) (second elem-type)))
+	   (storage (make-array (apply #'* (shape proto)) :element-type elem-type))
+	   (in-buffer (make-array window :element-type (array-element-type raw-data) :displaced-to raw-data :displaced-index-offset 0)))
+      (declare (type (simple-array (unsigned-byte 8) (*)) raw-data))
       (assert (typep step 'fixnum))
-      (loop for i upfrom 0 below (array-total-size raw-data) by step
-	    for index fixnum upfrom 0
-	    for string = (with-output-to-string (out)
-			   (loop for k upfrom i below (+ i step)
-				 do (princ (code-char (aref (tensor-proto-raw-data proto) k)) out)))
-	    do (setf (aref storage index) (cl-pack:unpack (type->packprefix proto) string)))
-      (make-array (shape proto) :element-type (type->lisp proto) :displaced-to storage))))
+      (flet ((displace (n)
+	       (setf in-buffer (adjust-array in-buffer window :displaced-to raw-data :displaced-index-offset n)))	     
+	     (read-float32 ()
+	       (ieee-floats:decode-float32 (intbytes:octets->uint32 in-buffer)))
+	     (read-float64 ()
+	       (ieee-floats:decode-float64 (intbytes:octets->uint64 in-buffer)))
+	     (read-int ()
+	       (intbytes:octets->int in-buffer n-byte)))
+	(declare (inline read-float32 read-float64))
+	(ecase dtype
+	  (:double
+	   (locally (declare (type (simple-array single-float (*)) storage))
+	     (loop for i fixnum upfrom 0 below to by step
+		   for n fixnum upfrom 0
+		   do (displace i) (setf (aref storage n) (the single-float (read-float32))))))
+	  (:float
+	   (locally (declare (type (simple-array single-float (*)) storage))
+	     (loop for i fixnum upfrom 0 below to by step
+		   for n fixnum upfrom 0
+		   do (displace i) (setf (aref storage n) (the single-float (read-float32))))))
+	  (T
+	   (locally (declare (type (simple-array t (*)) storage))
+	     (loop for i fixnum upfrom 0 below to by step
+		   for n fixnum upfrom 0
+		   do (displace i) (setf (aref storage n) (read-int))))))
+	(make-array (shape proto) :element-type elem-type :displaced-to storage)))))
 
 ;; (defmethod array->raw ((proto Tensor-Proto))  )

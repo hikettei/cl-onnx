@@ -20,7 +20,8 @@
 	       :cl-ppcre
 	       :alexandria
 	       :cl-easel
-	       :cl-pack
+	       :ieee-floats
+	       :cl-intbytes
 	       :cl-charms)
   :pathname "source"
   :components ((:file "package")
