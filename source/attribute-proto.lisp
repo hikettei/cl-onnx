@@ -12,7 +12,8 @@
 	      (s (vector (unsigned-byte 8)) nil t nil)
 	      (g graph-proto t t nil)
 	      (sparse-tensor sparse-tensor-proto t t nil)
-	      (tp type-proto t t nil)
+	      ;; (cl-onnx-name onnx-name)
+	      ((tp t) tensor-proto t t nil)
 	      (floats list nil t t)
 	      (ints list nil t t)
 	      (strings list nil t t)
@@ -22,6 +23,12 @@
 
 (defmethod read-attr ((proto Attribute-Proto))
   (case (attribute-proto-type proto)
+    (:TENSOR
+     (if (tensor-proto-dims (attribute-proto-tp proto))
+	 (raw->array (attribute-proto-tp proto))
+	 (aref (raw->array (attribute-proto-tp proto)))))
+    (:INTS
+     (attribute-proto-ints proto))
     (:INT
      (attribute-proto-i proto))
     (:FLOAT
