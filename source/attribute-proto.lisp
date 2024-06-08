@@ -33,6 +33,8 @@
      (attribute-proto-i proto))
     (:FLOAT
      (attribute-proto-f proto))
+    (:STRING
+     (attribute-proto-s proto))
     (T
      (warn "read-attr: not implemented: ~a" (attribute-proto-type proto))
      "?")))
