@@ -42,6 +42,8 @@
   (defmethod raw->array ((proto Tensor-Proto))
     (declare (optimize (speed 3)))
     ;; TODO: complex-numbers
+    (when (= 0 (array-total-size (tensor-proto-raw-data proto)))
+        (return-from raw->array nil))
     (let* ((raw-data (tensor-proto-raw-data proto))
 	   (to   (array-total-size raw-data))
 	   (step (/ to (the fixnum (apply #'* (the list (shape proto))))))
