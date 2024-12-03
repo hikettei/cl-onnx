@@ -45,10 +45,8 @@
 		       (if (= n (length lines))
 			   ""
 			   (format nil "~%")))))))
-
 ;; Failed Cases
 (defmethod visualize ((proto null)) "nil")
 (defmethod visualize ((proto string)) proto)
 (defmethod visualize ((proto t))
   (format nil "~a" proto))
-

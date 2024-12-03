@@ -19,7 +19,6 @@
 	       :cl-annot-revisit
 	       :cl-ppcre
 	       :alexandria
-	       :cl-easel
 	       :ieee-floats
 	       :cl-intbytes
 	       :cl-charms)
@@ -46,6 +45,11 @@
 	       (:file "doc")
 	       (:file "nicknames")
 	       (:file "graph-utils")))
+
+(asdf:defsystem "cl-onnx/viz"
+  :pathname "source"
+  :depends-on (:cl-easel :cl-onnx)
+  :components ((:file "extra-viz")))
 
 (asdf:defsystem "cl-onnx/test"
   :author "hikettei"
