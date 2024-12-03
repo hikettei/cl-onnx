@@ -1,44 +1,20 @@
-
 # cl-onnx
 
-CLI-Complete ONNX Graph Manipulator for Common Lisp (and more!).
+ONNX Parser dedicated to [Caten](https://github.com/hikettei/Caten). (If you are looking for ONNX Runtime running with Common Lisp, visit Caten.)
 
-## Disclaimer
+## Systems
 
-- cl-onnx is in the early stage of development, has not been fully tested, and is unstable.
+``` sh
+(ql:quickload :cl-onnx) ;; running with minimal dependencies
+(ql:quickload :cl-onnx/viz) ;; comes with extra dependencies but objects are displayed in more readable format.
+```
 
-- I do not intend to make this a stable product because I am not confident that I will continue to update the accompanying useful utilities and other features.
+## Feature: CLI Netron
 
-    - If you are going to use cl-onnx just for reading .onnx graph, it is safer for your product to use [cl-protobufs](https://github.com/qitab/cl-protobufs)
-
-    - And [here](https://github.com/hikettei/cl-onnx/blob/main/source/tensor-proto.lisp#L41) you can find how to unpack `raw_data` existing in TensorProto.
-
-- Never use it for products as we cannot guarantee its quality.
-
-- I think cl-onnx is dedicated to my personal projects.
-
-## Workload
-
-- [x] Protobuf <-> Common Lisp Objects
-
-- [x] Implement DAG Visualizer (like CLI Netron), which is available on Emacs/REPL (i.e.: ncurses is unavailable.).
-
-- [ ] Find Opset Documentation on REPL
-
-- [ ] C2FFI Based Binding for ONNX
-
-- [ ] utils (and useful macros) for accessing onnx graph in common lisp
-
-
-# Features
-
-## CLI Netron
-
-I am too lazy to open netron to check the small graphs :< since we are already using a wonderful tool called REPL.
-
-So I made a tool to draw the DAG in the REPL. ncurses is not used, so it should help you with fast deploying even in Emacs/Lem.
+I am too lazy to open netron even for the small graphs :(. So, just for my fun, I tried creating a CLI tool for graph visualization similar to Netron. However, it requires additional dependencies, so it won't work unless you do (ql:quickload :cl-onnx/viz).
 
 ```
+;; (ql:quickload :cl-onnx/viz) to use pprint graph.
 CL-USER> (onnx:viewnode (onnx:graph (onnx:load-model "./dummy_graph/layernorm.onnx")))
                        ┌─────┐                       
                        │input│                       
@@ -94,16 +70,6 @@ CL-USER> (onnx:viewnode (onnx:graph (onnx:load-model "./dummy_graph/layernorm.on
                       │output│                       
                       └──────┘
 ```
-
-## Requirements
-
-- Roswell
-
-- qlot
-
-- protobuf
-
-- I have confirmed cl-onnx works on macOS/Linux. I dunno about Windows😎.
 
 ## Installing (TODO)
 
