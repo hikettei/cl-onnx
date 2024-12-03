@@ -1,4 +1,3 @@
-
 (asdf:defsystem "cl-onnx/proto"
   :author "hikettei"
   :licence "MIT"
@@ -48,7 +47,7 @@
 
 (asdf:defsystem "cl-onnx/viz"
   :pathname "source"
-  :depends-on (:cl-easel :cl-onnx)
+  :depends-on (:cl-easel)
   :components ((:file "extra-viz")))
 
 (asdf:defsystem "cl-onnx/test"
@@ -59,4 +58,3 @@
   :depends-on (:rove)
   :pathname "test"
   :components ((:file "package")))
-
